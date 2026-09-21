@@ -12,7 +12,7 @@ Required repo secrets:
 
 | Secret | Value |
 |---|---|
-| `ANDROID_KEYSTORE_BASE64` | `base64 -i signing.keystore \| pbcopy` |
+| `ANDROID_KEYSTORE_BASE64` | `base64 -i ~/minesweeper.jks \| pbcopy` |
 | `ANDROID_KEYSTORE_PASSWORD` | keystore password |
 | `ANDROID_KEY_PASSWORD` | key password |
 | `ANDROID_KEY_ALIAS` | key alias (`my-key-alias` for the existing PWABuilder-issued key) |
@@ -37,5 +37,7 @@ Requires JDK 17 and the Android SDK. See [twa-manifest.json](twa-manifest.json) 
 
 ```bash
 BUBBLEWRAP_KEYSTORE_PASSWORD=... BUBBLEWRAP_KEY_PASSWORD=... \
-  npx @bubblewrap/cli build --signingKeyPath=/path/to/signing.keystore --signingKeyAlias=my-key-alias
+  npx @bubblewrap/cli build --signingKeyPath=~/minesweeper.jks --signingKeyAlias=my-key-alias
 ```
+
+The upload key lives at `~/minesweeper.jks` (SHA256 `05:6C:6B:B5:A8:B0:4B:43:4A:2C:E1:36:8C:42:2E:4B:D9:10:FC:20:B1:7E:E0:09:3E:FC:D0:61:D8:A0:73:86`, matching the fingerprint published in the app repo's `assetlinks.json`). Keep it backed up somewhere safe outside this repo — losing it means losing the ability to update the Play Store listing.
