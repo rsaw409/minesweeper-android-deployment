@@ -45,7 +45,13 @@ jobs:
           # bubblewrap looks for $ANDROID_HOME/tools/bin/sdkmanager first, which no longer
           # ships in modern SDK installs (and the old jar is incompatible with JDK 17+ anyway).
           # Point it at the modern cmdline-tools sdkmanager instead.
-          modern_sdkmanager="$(find "$ANDROID_HOME/cmdline-tools" -maxdepth 2 -name sdkmanager | head -n1)"
+          modern_sdkmanager="$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -n1)"
+          if [ -z "$modern_sdkmanager" ]; then
+            echo "::error::Could not locate a modern sdkmanager under $ANDROID_HOME/cmdline-tools"
+            find "$ANDROID_HOME/cmdline-tools" 2>&1
+            exit 1
+          fi
+          echo "Using sdkmanager at: $modern_sdkmanager"
           mkdir -p "$ANDROID_HOME/tools/bin"
           ln -sf "$modern_sdkmanager" "$ANDROID_HOME/tools/bin/sdkmanager"
 
