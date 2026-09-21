@@ -1,0 +1,94 @@
+name: Build & Publish Android Release
+
+on:
+  workflow_dispatch:
+
+# The Play Store versionCode must strictly increase on every upload. 4 is the
+# versionCode of the last release published via PWABuilder, so runs count up from it.
+env:
+  VERSION_CODE_BASE: 4
+
+jobs:
+  build:
+    name: Build & Sign TWA
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Configure Bubblewrap CLI
+        run: |
+          mkdir -p ~/.bubblewrap
+          cat > ~/.bubblewrap/config.json <<EOF
+          {
+            "jdkPath": "${JAVA_HOME}",
+            "androidSdkPath": "${ANDROID_HOME}"
+          }
+          EOF
+
+      - name: Work around bubblewrap's legacy sdkmanager lookup
+        run: |
+          # bubblewrap looks for $ANDROID_HOME/tools/bin/sdkmanager first, which no longer
+          # ships in modern SDK installs (and the old jar is incompatible with JDK 17+ anyway).
+          # Point it at the modern cmdline-tools sdkmanager instead.
+          modern_sdkmanager="$(find "$ANDROID_HOME/cmdline-tools" -maxdepth 2 -name sdkmanager | head -n1)"
+          mkdir -p "$ANDROID_HOME/tools/bin"
+          ln -sf "$modern_sdkmanager" "$ANDROID_HOME/tools/bin/sdkmanager"
+
+      - name: Download Android keystore
+        id: android_keystore
+        uses: timheuer/base64-to-file@v1.0.3
+        with:
+          fileName: upload-keystore.jks
+          encodedString: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+
+      - name: Set version code from run number
+        run: |
+          version_code=$((VERSION_CODE_BASE + GITHUB_RUN_NUMBER))
+          sed -i -E "s/versionCode [0-9]+/versionCode ${version_code}/" app/build.gradle
+          echo "Building versionCode ${version_code}"
+
+      - name: Build signed Android App Bundle
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          npx --yes @bubblewrap/cli build \
+            --signingKeyPath="${{ steps.android_keystore.outputs.filePath }}" \
+            --signingKeyAlias="${{ secrets.ANDROID_KEY_ALIAS }}"
+
+      - name: Upload Android Release
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release
+          path: app-release-bundle.aab
+
+  deploy:
+    name: Publish to Play Store
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    steps:
+      - name: Get Android Build from artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-release
+
+      - name: Release Build to production track
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAYSTORE_ACCOUNT_KEY }}
+          packageName: developer.rohitsaw.minesweeper
+          releaseFiles: app-release-bundle.aab
+          track: production
+          status: completed
