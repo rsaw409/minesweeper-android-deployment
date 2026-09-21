@@ -24,6 +24,11 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # v3's default packages input is "tools platform-tools", but Google has since
+          # removed the legacy "tools" package from the SDK repository entirely, which
+          # makes sdkmanager exit non-zero. Override to skip it.
+          packages: "platform-tools"
 
       - name: Configure Bubblewrap CLI
         run: |
