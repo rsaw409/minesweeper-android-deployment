@@ -5,8 +5,15 @@ on:
 
 # The Play Store versionCode must strictly increase on every upload. 4 is the
 # versionCode of the last release published via PWABuilder, so runs count up from it.
+#
+# BUBBLEWRAP_VERSION is pinned deliberately: this is the only thing standing between a
+# routine release and an unreviewed Android target SDK bump, since `bubblewrap update`
+# regenerates the whole Android project (and picks whatever SDK versions that Bubblewrap
+# release bundles) from twa-manifest.json on every run. Bump this by hand, in its own PR,
+# when you need a new target SDK / Play policy compliance version — see README.md.
 env:
   VERSION_CODE_BASE: 4
+  BUBBLEWRAP_VERSION: 1.25.0
 
 jobs:
   build:
@@ -14,6 +21,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Must run before "Set up JDK 17" below: that step's `cache: gradle` hashes
+      # **/*.gradle*, gradle-wrapper.properties etc. to key its cache, and none of
+      # those files exist in the checkout until this generates them from
+      # twa-manifest.json. bubblewrap update needs neither JDK nor the Android SDK.
+      - name: Generate Android project from twa-manifest.json
+        run: npx --yes @bubblewrap/cli@${{ env.BUBBLEWRAP_VERSION }} update --skipVersionUpgrade
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -73,7 +87,7 @@ jobs:
           BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          npx --yes @bubblewrap/cli build \
+          npx --yes @bubblewrap/cli@${{ env.BUBBLEWRAP_VERSION }} build \
             --signingKeyPath="${{ steps.android_keystore.outputs.filePath }}" \
             --signingKeyAlias="${{ secrets.ANDROID_KEY_ALIAS }}"
 

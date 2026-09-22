@@ -21,7 +21,9 @@
     "alias": "android"
   },
   "appVersionCode": 4,
+  "_comment_appVersionCode": "Historical only — 4 was the last versionCode published via PWABuilder. The real Play Store versionCode is computed by CI as VERSION_CODE_BASE + workflow run number (see .github/workflows/release.yml) and always overwrites this value at build time. Don't bump this field expecting it to ship.",
   "appVersion": "3.0.0.1",
+  "_comment_appVersion": "User-visible version name (Play Store 'version name'). This one you DO bump by hand for a real release — nothing else changes it.",
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://minesweeper-60xh.onrender.com/manifest.json",
@@ -35,6 +37,8 @@
   "isMetaQuest": false,
   "fullScopeUrl": "https://minesweeper-60xh.onrender.com/",
   "minSdkVersion": 21,
+  "_comment_minSdkVersion": "Oldest Android API level the app installs on. NOT the field Play Store nags you about yearly — that's targetSdkVersion, a different, unrelated setting (see below). Only lower/raise this to change the floor of supported devices.",
+  "_comment_targetAndCompileSdkVersion": "targetSdkVersion/compileSdkVersion (currently 36/36, generated into app/build.gradle) are NOT set anywhere in this file — Bubblewrap has no manifest field for them. Each Bubblewrap release bundles its own values, and CI regenerates the whole Android project from this manifest using a PINNED Bubblewrap CLI version (BUBBLEWRAP_VERSION in .github/workflows/release.yml). THIS is the field Play Store requires bumping roughly every year — when that happens, bump BUBBLEWRAP_VERSION there (in its own reviewed change), not minSdkVersion or anything in this file.",
   "orientation": "default",
   "fingerprints": [],
   "additionalTrustedOrigins": [],
