@@ -22,7 +22,7 @@ Committed files are just: `twa-manifest.json`, [.github/workflows/release.yml](.
 
 ## How releases work
 
-Releases are triggered manually via the **Build & Publish Android Release** GitHub Actions workflow (`workflow_dispatch` only — Actions tab → Run workflow). It:
+The **Build & Publish Android Release** GitHub Actions workflow runs automatically on every push to `main` (`on: push: branches: [main]` in [release.yml](.github/workflows/release.yml)) — **there is no manual trigger and no review gate**. Any push to `main`, including a docs-only or `twa-manifest.json` change, builds and publishes a new production release. It:
 1. Runs `bubblewrap update --skipVersionUpgrade` to regenerate the entire Android project from `twa-manifest.json`, at a **pinned** Bubblewrap CLI version (`BUBBLEWRAP_VERSION` env var in [release.yml](.github/workflows/release.yml)).
 2. Patches `versionCode` into the freshly-generated `app/build.gradle`.
 3. Builds a signed `.aab` using Bubblewrap CLI and the upload keystore (from secrets).
@@ -40,8 +40,8 @@ The upload keystore (`~/minesweeper.jks` locally, base64-encoded in CI secrets) 
 
 ## Working conventions for this repo
 
-- Config changes (icon, colors, name, host, version name, etc.) are a one-file edit: change `twa-manifest.json`, commit, run the release workflow. No local Bubblewrap/Android SDK step is required for these.
-- Don't change the CI trigger from `workflow_dispatch` — Play Store publishes are manual/on-demand by design (no auto-publish on push).
-- To bump the Android target/compile SDK version (e.g. for a Play policy deadline), bump `BUBBLEWRAP_VERSION` in `release.yml` by hand, in its own reviewed change — don't add a manifest field for this, it isn't one.
+- Config changes (icon, colors, name, host, version name, etc.) are a one-file edit: change `twa-manifest.json` and push to `main` — that push ships to production automatically, there's no separate release step.
+- **Any push to `main` publishes to the Play Store production track immediately** — this was a deliberate choice (auto-publish over a manual/reviewed gate), so treat every commit to `main` in this repo as a live release, not a draft. Land wrapper changes on a branch/PR first if they need review before shipping.
+- To bump the Android target/compile SDK version (e.g. for a Play policy deadline), bump `BUBBLEWRAP_VERSION` in `release.yml` by hand, in its own reviewed change — don't add a manifest field for this, it isn't one. Merging that change ships a release using the new SDK immediately.
 - Never suggest committing `app/`, `build.gradle`, `settings.gradle`, `gradlew`, `gradle/`, `store_icon.png`, or `manifest-checksum.txt` — they're gitignored on purpose.
 - Local builds need JDK 17, the Android SDK, and Node; the project must be generated with `bubblewrap update` before it can be opened/built (see [README](README.md)) since it isn't checked in.

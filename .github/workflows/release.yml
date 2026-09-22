@@ -1,7 +1,8 @@
 name: Build & Publish Android Release
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [main]
 
 # The Play Store versionCode must strictly increase on every upload. 4 is the
 # versionCode of the last release published via PWABuilder, so runs count up from it.
@@ -21,6 +22,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Without a ~/.bubblewrap/config.json already present, `bubblewrap update` drops
+      # into an interactive "install the JDK?" prompt on a fresh machine and hangs/crashes
+      # in CI (no stdin). The real config (with actual JAVA_HOME/ANDROID_HOME) gets written
+      # further down once those are known; this placeholder only needs to exist to skip the
+      # prompt — `update` doesn't read/validate it, unlike the `build` step later.
+      - name: Suppress Bubblewrap's first-run setup prompt
+        run: |
+          mkdir -p ~/.bubblewrap
+          cat > ~/.bubblewrap/config.json <<EOF
+          {
+            "jdkPath": "/placeholder",
+            "androidSdkPath": "/placeholder"
+          }
+          EOF
 
       # Must run before "Set up JDK 17" below: that step's `cache: gradle` hashes
       # **/*.gradle*, gradle-wrapper.properties etc. to key its cache, and none of
@@ -44,7 +60,7 @@ jobs:
           # makes sdkmanager exit non-zero. Override to skip it.
           packages: "platform-tools"
 
-      - name: Configure Bubblewrap CLI
+      - name: Configure Bubblewrap CLI with real JDK/SDK paths
         run: |
           mkdir -p ~/.bubblewrap
           cat > ~/.bubblewrap/config.json <<EOF
